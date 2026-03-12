@@ -1,0 +1,272 @@
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { PiggyBank, RotateCcw, Euro, TriangleAlert, UserPlus, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+
+const DEFAULT_PEOPLE = ["Anna", "Ben", "Clara", "David", "Eva"];
+
+export default function VerkacktOMeterApp() {
+  const [people, setPeople] = useState(DEFAULT_PEOPLE);
+  const [chefName, setChefName] = useState("Chef");
+  const [selectedPerson, setSelectedPerson] = useState(DEFAULT_PEOPLE[0]);
+  const [newPerson, setNewPerson] = useState("");
+  const [entries, setEntries] = useState([]);
+  const [piggyBank, setPiggyBank] = useState(0);
+  const [message, setMessage] = useState("Bereit für den nächsten Spaß-Eintrag.");
+
+  const totalCount = entries.length;
+
+  const stats = useMemo(() => {
+    const result = {};
+    people.forEach((p) => {
+      result[p] = 0;
+    });
+    entries.forEach((entry) => {
+      result[entry.person] = (result[entry.person] || 0) + 1;
+    });
+    return result;
+  }, [entries, people]);
+
+  const addPerson = () => {
+    const cleaned = newPerson.trim();
+    if (!cleaned || people.includes(cleaned) || cleaned === chefName) return;
+    const next = [...people, cleaned];
+    setPeople(next);
+    setSelectedPerson(selectedPerson || cleaned);
+    setNewPerson("");
+  };
+
+  const removePerson = (person) => {
+    const next = people.filter((p) => p !== person);
+    setPeople(next);
+    if (selectedPerson === person) {
+      setSelectedPerson(next[0] || "");
+    }
+  };
+
+  const registerFail = () => {
+    if (!selectedPerson) return;
+
+    const now = new Date();
+    const entry = {
+      person: selectedPerson,
+      timestamp: now.toLocaleString("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setEntries((prev) => [entry, ...prev]);
+    setPiggyBank((prev) => prev + 1);
+    setMessage(`${selectedPerson} hat zu früh an ${chefName} zurückgegeben. 1 € ins virtuelle Schweinchen.`);
+  };
+
+  const resetAll = () => {
+    setEntries([]);
+    setPiggyBank(0);
+    setMessage("Alles zurückgesetzt. Neues Meeting, neues Glück.");
+  };
+
+  const sortedStats = [...people].sort((a, b) => (stats[b] || 0) - (stats[a] || 0));
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Verkackt-o-Meter</h1>
+            <p className="text-sm text-slate-600">
+              Ein Spaß-Tool für den Fall, dass jemand im Daily zu früh an {chefName} zurückgibt.
+            </p>
+          </div>
+          <Button onClick={resetAll} className="rounded-2xl">
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Alles zurücksetzen
+          </Button>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="rounded-2xl shadow-sm lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Schneller Eintrag</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm text-slate-500">Chef</div>
+                  <div className="mt-1 text-2xl font-semibold">{chefName}</div>
+                </div>
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm text-slate-500">Vorfälle</div>
+                  <div className="mt-1 text-2xl font-semibold">{totalCount}</div>
+                </div>
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm text-slate-500">Schweinchen</div>
+                  <div className="mt-1 text-2xl font-semibold">{piggyBank.toFixed(2)} €</div>
+                </div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border bg-white p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <TriangleAlert className="mt-0.5 h-5 w-5" />
+                  <div>
+                    <div className="font-medium">Status</div>
+                    <div className="text-sm text-slate-600">{message}</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="space-y-3 rounded-2xl border p-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Wer hat's verkackt?</label>
+                  <div className="flex flex-wrap gap-2">
+                    {people.map((person) => (
+                      <Button
+                        key={person}
+                        variant={selectedPerson === person ? "default" : "outline"}
+                        className="rounded-2xl"
+                        onClick={() => setSelectedPerson(person)}
+                      >
+                        {person}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={registerFail} className="rounded-2xl">
+                  <Euro className="mr-2 h-4 w-4" />
+                  1 € ins Schweinchen buchen
+                </Button>
+              </div>
+
+              <div>
+                <div className="mb-3 text-sm font-medium text-slate-700">Letzte Einträge</div>
+                <div className="space-y-2">
+                  {entries.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed p-4 text-sm text-slate-500">
+                      Noch nichts erfasst.
+                    </div>
+                  ) : (
+                    entries.map((entry, index) => (
+                      <div
+                        key={`${entry.person}-${entry.timestamp}-${index}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border p-3 text-sm"
+                      >
+                        <div className="font-medium">{entry.person}</div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="rounded-xl">1 €</Badge>
+                          <span className="text-slate-500">{entry.timestamp}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle>Virtuelles Schweinchen</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <motion.div
+                  key={piggyBank}
+                  initial={{ scale: 0.95, opacity: 0.8 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center gap-3 rounded-2xl border p-5"
+                >
+                  <PiggyBank className="h-16 w-16" />
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{piggyBank.toFixed(2)} €</div>
+                    <div className="text-sm text-slate-500">Virtueller Spaßstand</div>
+                  </div>
+                  <Badge className="rounded-xl">{totalCount} Einträge</Badge>
+                </motion.div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle>Einstellungen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Chef-Name</label>
+                  <Input value={chefName} onChange={(e) => setChefName(e.target.value || "Chef")} />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">Person hinzufügen</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Name"
+                      value={newPerson}
+                      onChange={(e) => setNewPerson(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addPerson();
+                      }}
+                    />
+                    <Button onClick={addPerson} className="rounded-2xl">
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-sm font-medium">Teilnehmende</div>
+                  <div className="space-y-2">
+                    {people.map((person, index) => (
+                      <div
+                        key={person}
+                        className="flex items-center justify-between rounded-2xl border p-3 text-sm"
+                      >
+                        <div className="font-medium">{index + 1}. {person}</div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl"
+                          onClick={() => removePerson(person)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle>Hall of Shame</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {sortedStats.map((person) => (
+                  <div
+                    key={person}
+                    className="flex items-center justify-between rounded-2xl border p-3 text-sm"
+                  >
+                    <span className="font-medium">{person}</span>
+                    <Badge className="rounded-xl">{stats[person] || 0}x</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
